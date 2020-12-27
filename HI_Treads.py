@@ -22,7 +22,29 @@ LED_1 = 32
 
 
 class Led():
-    """Returns a Led Object"""
+    """
+    Returns a Led Object
+
+    Attributes
+    ----------
+    mode : int
+        Indicates the current mode for the led
+    option : float
+        Indicates the current option for the led
+    timer : treading.Timer object
+        Timer which is used for the blinking mode
+    blinkstate : int
+        Indicates if the led is powered on or off
+
+    Methods
+    -------
+    blink()
+        Blink function that works with a timer which is called after a specified number of seconds
+    set(mode, option)
+        Sets a new mode for the led with a specified mode and an associed option
+    cancel()
+        Cancels the timer to kill the Tread process
+    """
     def __init__(self):
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(LED_1, GPIO.OUT)
@@ -32,7 +54,7 @@ class Led():
         self.blinkstate = 0
 
     def blink(self):
-        """Blink function that work with a timer which is called after a specified number of seconds"""
+        """Blink function that works with a timer which is called after a specified number of seconds"""
         self.blinkstate = (self.blinkstate + 1) % 2
         GPIO.output(LED_1, self.blinkstate)
         self.timer = threading.Timer(self.option, self.blink)
