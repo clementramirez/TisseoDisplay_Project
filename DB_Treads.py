@@ -14,7 +14,7 @@ logger = logging.getLogger()
 
 class DB_Tread(threading.Thread):
     """
-    Returns a DB object that can retrieves information from Tisseo Api and save them on a mysql DB
+    Returns a DB object that can retrieves information from Tisseo Api and saves them on a mysql DB
 
     Attributes
     ----------
@@ -54,7 +54,7 @@ class DB_Tread(threading.Thread):
             database (str) : Database name that contain your autobus lines data
             request (str) : String that contains the body of the Tisseo API HTTP request
             api_key (str) : String that contains the API key sent by Tisseo (If you want to obtain it, please send an email to opendata@tisseo.fr)
-            updt_rate (float) : Time between two update of the DB in seconds
+            updt_rate (float) : Time between two updates of the DB in seconds
         """
         threading.Thread.__init__(self)
         self.updt_rate = updt_rate

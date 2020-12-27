@@ -5,7 +5,7 @@ import time
 import threading
 import configparser
 import logging
-import coloredlogs
+# import coloredlogs # Uncomment if used later
 from logging.handlers import RotatingFileHandler
 
 
@@ -39,7 +39,7 @@ config.read('TisseoDisplay.conf')
 
 # Logger Init
 logger = logging.getLogger()
-coloredlogs.install(level='DEBUG', logger=logger)
+# coloredlogs.install(level='DEBUG', logger=logger) #Uncomment if used later
 formatter = logging.Formatter('%(asctime)s | [%(levelname)s] | %(message)s')
 file_handler = RotatingFileHandler(config['LogFile_config']['Filename'], 'a', 10000000, 1)
 file_handler.setLevel(logging.INFO)
