@@ -76,7 +76,7 @@ class DB_Tread(threading.Thread):
             self.addNextStopData = ("UPDATE 79_Ramonville_Périgord SET Next_Bus_1 = %s, Real_Time_1 = %s, Next_Bus_2 = %s, Real_Time_2 = %s, Next_Bus_3 = %s, Real_Time_3 = %s")
 
             logger.warning("Connection Opened !!")
-        except mysql.connector.Error as details:
+        except Exception as details:
             logger.critical("Error While Connecting to the DataBase : %s", details)
 
     def RecupAndUpload(self):
