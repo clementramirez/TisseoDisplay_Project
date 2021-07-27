@@ -1,0 +1,24 @@
+2021-07-27 10:54:40,343 | [WARNING] | Button_Retreiver Thread Initialised
+2021-07-27 10:54:40,631 | [WARNING] | Connection Opened !!
+2021-07-27 10:54:41,241 | [WARNING] | Button_Retreiver Thread Started
+2021-07-27 10:54:47,370 | [ERROR] | name 'dispmode' is not defined
+2021-07-27 10:54:52,579 | [ERROR] | name 'dispmode' is not defined
+2021-07-27 10:54:53,179 | [ERROR] | name 'dispmode' is not defined
+2021-07-27 10:54:53,882 | [ERROR] | name 'dispmode' is not defined
+2021-07-27 10:54:54,778 | [ERROR] | name 'dispmode' is not defined
+2021-07-27 10:54:55,380 | [ERROR] | name 'dispmode' is not defined
+2021-07-27 10:55:01,698 | [ERROR] | name 'dispmode' is not defined
+2021-07-27 10:55:04,100 | [ERROR] | name 'dispmode' is not defined
+2021-07-27 11:10:41,127 | [WARNING] | Button_Retreiver Thread Initialised
+2021-07-27 11:10:41,426 | [WARNING] | Connection Opened !!
+2021-07-27 11:10:42,028 | [WARNING] | Button_Retreiver Thread Started
+2021-07-27 11:14:32,926 | [ERROR] | name 'dispmode' is not defined
+2021-07-27 11:14:33,929 | [ERROR] | name 'dispmode' is not defined
+2021-07-27 11:19:19,232 | [ERROR] | I/O Error of the LCD screen
+2021-07-27 11:22:03,203 | [WARNING] | Button_Retreiver Thread Initialised
+2021-07-27 11:22:03,498 | [WARNING] | Connection Opened !!
+2021-07-27 11:22:04,134 | [WARNING] | Button_Retreiver Thread Started
+2021-07-27 11:45:25,236 | [ERROR] | Value Error as invalid literal for int() with base 10: '-1 day, 23'
+2021-07-27 11:51:32,704 | [WARNING] | Button_Retreiver Thread Initialised
+2021-07-27 11:51:32,984 | [WARNING] | Connection Opened !!
+2021-07-27 11:51:33,583 | [WARNING] | Button_Retreiver Thread Started

@@ -207,6 +207,7 @@ class LCDscreen(threading.Thread):
         self.lcd = lcddriver.lcd()
         self.lcd.lcd_clear()
         self.mode = 0
+        self.available = True
         self.wantstop = False
 
         # Shows the init screen
@@ -221,33 +222,41 @@ class LCDscreen(threading.Thread):
         while not self.wantstop:
             try:
                 # Tisseo autobus data display mode
-                if self.mode == 0:
-                    lasttimenow = timenow
-                    timenow = datetime.datetime.now()
-                    RawData = self.DB_T.read()
-                    if timenow.second != lasttimenow.second and RawData != []:
-                        timestr = "%02d:%02d" % (timenow.hour, timenow.minute)
-                        self.lcd.lcd_display_string(" Prch Passages " + timestr, 1)
-                        i = 0
-                        for line in RawData:
-                            i += 1
-                            data = [None]
-                            deltaT = line[0] - timenow
-                            data[0] = str(deltaT).split(".")[0]
-                            data[0] = data[0].split(":")
-                            self.lcd.lcd_display_string("79-Ramon %02dh %02dm %02ds" % (int(data[0][0]),
-                                                                                        int(data[0][1]),
-                                                                                        int(data[0][2])), i+1)
-                # Second display mode
-                elif self.mode == 1:
-                    self.lcd.lcd_display_string("Menu 2", 2)
+                if self.available == True:
+                    self.available = False
+                    if self.mode == 0:
+                        lasttimenow = timenow
+                        timenow = datetime.datetime.now()
+                        RawData = self.DB_T.read()
+                        if timenow.second != lasttimenow.second and RawData != []:
+                            timestr = "%02d:%02d" % (timenow.hour, timenow.minute)
+                            self.lcd.lcd_display_string(" Prch Passages " + timestr, 1)
+                            i = 0
+                            for line in RawData:
+                                i += 1
+                                data = [None]
+                                deltaT = line[0] - timenow
+                                data[0] = str(deltaT).split(".")[0]
+                                data[0] = data[0].split(":")
+                                self.lcd.lcd_display_string("79-Ramon %02dh %02dm %02ds" % (int(data[0][0]),
+                                                                                            int(data[0][1]),
+                                                                                            int(data[0][2])), i+1)
+                    # Second display mode
+                    elif self.mode == 1:
+                        self.lcd.lcd_display_string("Menu 2", 2)
+                    self.available = True
+                else:
+                    print("Busy")
 
             except OSError:
                 logger.error("I/O Error of the LCD screen")
+                self.available = True
             except ValueError as e:
                 logger.error("Value Error as %s" % (e))
+                self.available = True
             except NameError as e:
                 logger.error("Name Error as %s" % (e))
+                self.available = True
 
             time.sleep(0.2)
 
@@ -257,8 +266,12 @@ class LCDscreen(threading.Thread):
 
     def set(self, mode):
         """Changes the current menu or mode of the screen"""
-        self.lcd.lcd_clear()
+        while self.available == False:
+            print("Busy")
+        self.available == False
+        self.reset()
         self.mode = mode
+        self.available == True
 
     def reset(self):
         """Resets the lcd screen"""
