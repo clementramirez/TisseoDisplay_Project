@@ -50,6 +50,7 @@ class Led():
         GPIO.setup(LED_1, GPIO.OUT)
         self.mode = 0
         self.option = 0
+        self.lastoption = 0
         self.timer = threading.Timer(self.option, self.blink)
         self.blinkstate = 0
 
@@ -75,20 +76,20 @@ class Led():
         """
         self.mode = mode
         self.option = option
-        self.timer.cancel()
 
         # Persistant mode
         if mode == 0:
+            self.cancel()
             try:
                 GPIO.output(LED_1, int(option))
             except Exception:
                 print("Error: mode or/and option incorrect")
         # Blinking mode
         elif mode == 1:
-            if option != 0:
-                self.blink()
-            else:
+            if option != 0 and option != self.lastoption:
+                self.lastoption = option
                 self.cancel()
+                self.blink()
 
         logger.debug("Led switched to mode : %s with option : %s", mode, option)
 
@@ -201,7 +202,7 @@ class LCDscreen(threading.Thread):
         """Constructs al attributes, initialised the lcd screen and shows splash screen"""
         threading.Thread.__init__(self)
 
-        self.DB_T = kargs['DB_object']
+        self.DB_T, self.LED_T = kargs['DB_object'], kargs['LED_object']
 
         # Initialisation of the LCD screen
         self.lcd = lcddriver.lcd()
@@ -221,29 +222,46 @@ class LCDscreen(threading.Thread):
         timenow = datetime.datetime.now()
         while not self.wantstop:
             try:
+                
                 # Tisseo autobus data display mode
-                if self.available == True:
+                if self.available is True:
                     self.available = False
+
+                    # Concatenate Datas from the DB
+                    lasttimenow = timenow
+                    timenow = datetime.datetime.now()
+                    RawData = self.DB_T.read()
+                    if timenow.second != lasttimenow.second and RawData != []:
+                        timestr = "%02d:%02d" % (timenow.hour, timenow.minute)
+                        datas = []
+                        for line in RawData:
+                            deltaT = line[0] - timenow
+                            datas.append(str(str(deltaT).split(".")[0]).split(":"))
+
+                    #Retreive meteo data
+
+                    # Apply different senarios for the led
+                    if 7 < int(datas[0][1]) <= 10:
+                        self.LED_T.set(1, 1)
+                    elif 5 <= int(datas[0][1]) <= 7:
+                        self.LED_T.set(1, 0.5)
+                    elif 3 <= int(datas[0][1]) < 5:
+                        self.LED_T.set(1, 0.25)
+                    else:
+                        self.LED_T.set(0, 0)
+                    
                     if self.mode == 0:
-                        lasttimenow = timenow
-                        timenow = datetime.datetime.now()
-                        RawData = self.DB_T.read()
                         if timenow.second != lasttimenow.second and RawData != []:
-                            timestr = "%02d:%02d" % (timenow.hour, timenow.minute)
                             self.lcd.lcd_display_string(" Prch Passages " + timestr, 1)
-                            i = 0
-                            for line in RawData:
-                                i += 1
-                                data = [None]
-                                deltaT = line[0] - timenow
-                                data[0] = str(deltaT).split(".")[0]
-                                data[0] = data[0].split(":")
-                                self.lcd.lcd_display_string("79-Ramon %02dh %02dm %02ds" % (int(data[0][0]),
-                                                                                            int(data[0][1]),
-                                                                                            int(data[0][2])), i+1)
+                            for i, data in enumerate(datas, 2):
+                                self.lcd.lcd_display_string("79-Ramon %02dh %02dm %02ds" % (int(data[0]),
+                                                                                            int(data[1]),
+                                                                                            int(data[2])), i)
                     # Second display mode
                     elif self.mode == 1:
-                        self.lcd.lcd_display_string("Menu 2", 2)
+                        if timenow.second != lasttimenow.second and RawData != []:
+                            self.lcd.lcd_display_string("     Meteo     " + timestr, 1)
+                            self.lcd.lcd_display_string("Menu 2", 2)
                     self.available = True
                 else:
                     print("Busy")

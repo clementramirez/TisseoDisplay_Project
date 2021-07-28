@@ -1,1 +1,4 @@
 TisseoDisplay.conf
+TisseoDisplay.log
+.gitignore
+__pycache__

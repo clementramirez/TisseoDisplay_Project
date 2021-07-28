@@ -59,7 +59,7 @@ DB_T = DB_Tread(config['DB_config']['Host'],
                 config['TisseoAPI_config']['Request'],
                 config['TisseoAPI_config']['API_key'],
                 config['DB_config']['Updt_Rate'])
-LCD = LCDscreen(DB_object=DB_T)
+LCD = LCDscreen(DB_object=DB_T, LED_object=LED)
 BT_R.start()
 DB_T.start()
 LCD.start()
@@ -79,11 +79,13 @@ while True:
                 LED.set(0, dispmode)
             if button[3] == 1:
                 LCD.set((LCD.mode + 1) % 2)
-            if button[0] == 1:
-                timei += 0.1
-                LED.set(1, timei)
+            if button[2] == 1:
+                LCD.set((LCD.mode - 1) % 2)
             if button[1] == 1:
                 timei -= 0.1
+                LED.set(1, timei)
+            if button[0] == 1:
+                timei += 0.1
                 LED.set(1, timei)
     except Exception as e:
         logger.error(e)
