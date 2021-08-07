@@ -202,7 +202,7 @@ class LCDscreen(threading.Thread):
         """Constructs al attributes, initialised the lcd screen and shows splash screen"""
         threading.Thread.__init__(self)
 
-        self.DB_T, self.LED_T = kargs['DB_object'], kargs['LED_object']
+        self.DB_T, self.LED_T, self.METEO_T = kargs['DB_object'], kargs['LED_object'], kargs['METEO_object']
 
         # Initialisation of the LCD screen
         self.lcd = lcddriver.lcd()
@@ -222,7 +222,7 @@ class LCDscreen(threading.Thread):
         timenow = datetime.datetime.now()
         while not self.wantstop:
             try:
-                
+
                 # Tisseo autobus data display mode
                 if self.available is True:
                     self.available = False
@@ -231,15 +231,16 @@ class LCDscreen(threading.Thread):
                     lasttimenow = timenow
                     timenow = datetime.datetime.now()
                     RawData = self.DB_T.read()
+                    datas = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
                     if timenow.second != lasttimenow.second and RawData != []:
-                        timestr = "%02d:%02d" % (timenow.hour, timenow.minute)
                         datas = []
+                        timestr = "%02d:%02d" % (timenow.hour, timenow.minute)
                         for line in RawData:
                             deltaT = line[0] - timenow
                             datas.append(str(str(deltaT).split(".")[0]).split(":"))
 
-                    #Retreive meteo data
-
+                    # Retreive meteo data
+                    current_meteo = self.METEO_T.read()
                     # Apply different senarios for the led
                     if 7 < int(datas[0][1]) <= 10:
                         self.LED_T.set(1, 1)
@@ -249,7 +250,7 @@ class LCDscreen(threading.Thread):
                         self.LED_T.set(1, 0.25)
                     else:
                         self.LED_T.set(0, 0)
-                    
+
                     if self.mode == 0:
                         if timenow.second != lasttimenow.second and RawData != []:
                             self.lcd.lcd_display_string(" Prch Passages " + timestr, 1)
@@ -261,7 +262,12 @@ class LCDscreen(threading.Thread):
                     elif self.mode == 1:
                         if timenow.second != lasttimenow.second and RawData != []:
                             self.lcd.lcd_display_string("     Meteo     " + timestr, 1)
-                            self.lcd.lcd_display_string("Menu 2", 2)
+                            self.lcd.lcd_display_string("Wind: %02dkm/h - %02d" % (current_meteo['Wind_spd'],
+                                                                                   current_meteo['Wind_hdg']), 2)
+                            self.lcd.lcd_display_string("Clds: %02d%% - Rn: 15'" % (current_meteo['Clds']), 3)
+                            self.lcd.lcd_display_string("T: %02d/%02dC - H: %02d%%" % (current_meteo['T_real'],
+                                                                                       current_meteo['T_ressent'],
+                                                                                       current_meteo['Hum']), 4)
                     self.available = True
                 else:
                     print("Busy")

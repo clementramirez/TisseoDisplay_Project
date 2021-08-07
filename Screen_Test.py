@@ -1,6 +1,7 @@
 # Modules importation
 from HI_Treads import Led, Button_Retreiver, LCDscreen
 from DB_Treads import DB_Tread
+from METEO_Treads import METEO_Tread
 import time
 import threading
 import configparser
@@ -51,6 +52,7 @@ logger.addHandler(file_handler)
 
 # Initialisation of Human-Machine Interface and DB_Thread
 LED = Led()
+METEO_T = METEO_Tread()
 BT_R = Button_Retreiver(0.1)
 DB_T = DB_Tread(config['DB_config']['Host'],
                 config['DB_config']['User'],
@@ -59,7 +61,7 @@ DB_T = DB_Tread(config['DB_config']['Host'],
                 config['TisseoAPI_config']['Request'],
                 config['TisseoAPI_config']['API_key'],
                 config['DB_config']['Updt_Rate'])
-LCD = LCDscreen(DB_object=DB_T, LED_object=LED)
+LCD = LCDscreen(DB_object=DB_T, LED_object=LED, METEO_object=METEO_T)
 BT_R.start()
 DB_T.start()
 LCD.start()
