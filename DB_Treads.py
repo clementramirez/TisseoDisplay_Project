@@ -87,26 +87,31 @@ class DB_Tread(threading.Thread):
         cursor = self.mydb.cursor()
 
         # Retreiving XML data from Tisseo API
-        queryAsw = requests.get(self.HTTPRequest + "&key=" + self.APIKey).text.encode('utf-8')
+        try:
+            queryAsw = requests.get(self.HTTPRequest + "&key=" + self.APIKey).text.encode('utf-8')
+        except:
+            logger.critical("Network Failed !!")
+        if queryAsw != "":
+            # XML data exctraction
+            xmlf = etree.fromstring(queryAsw)
+            for departure in xmlf.xpath('/departures/departure'):
+                ExtractedData.append([departure.get('dateTime'), departure.get('realTime')])
 
-        # XML data exctraction
-        xmlf = etree.fromstring(queryAsw)
-        for departure in xmlf.xpath('/departures/departure'):
-            ExtractedData.append([departure.get('dateTime'), departure.get('realTime')])
+            for passage in ExtractedData[:3]:
+                passDateTime = datetime.datetime.strptime(passage[0], "%Y-%m-%d %H:%M:%S")
+                if passage[1] == "yes":
+                    passage[1] = True
+                else:
+                    passage[1] = False
+                self.FormatedData.append([passDateTime, passage[1]])
 
-        for passage in ExtractedData[:3]:
-            passDateTime = datetime.datetime.strptime(passage[0], "%Y-%m-%d %H:%M:%S")
-            if passage[1] == "yes":
-                passage[1] = True
-            else:
-                passage[1] = False
-            self.FormatedData.append([passDateTime, passage[1]])
-
-        # Sending extracted data to mysql DB
-        cursor.execute(self.addNextStopData, (self.FormatedData[0][0], self.FormatedData[0][1],
-                                              self.FormatedData[1][0], self.FormatedData[1][1],
-                                              self.FormatedData[2][0], self.FormatedData[2][1]))
-        self.mydb.commit()
+            # Sending extracted data to mysql DB
+            cursor.execute(self.addNextStopData, (self.FormatedData[0][0], self.FormatedData[0][1],
+                                                self.FormatedData[1][0], self.FormatedData[1][1],
+                                                self.FormatedData[2][0], self.FormatedData[2][1]))
+            self.mydb.commit()
+        else:
+            logger.critical("Network Failed !!")
         cursor.close()
 
     def run(self):

@@ -36,7 +36,8 @@ class METEO_Tread():
                              'Hum': round(rawDatas.current_forecast["humidity"]),
                              'Wind_spd': rawDatas.current_forecast["wind"]["speed"],
                              'Wind_hdg': rawDatas.current_forecast["wind"]["direction"],
-                             'Clds': rawDatas.current_forecast["clouds"]}
+                             'Clds': rawDatas.current_forecast["clouds"],
+                             'Rain': rawDatas.current_forecast["rain"]["1h"]}
 
     def stop(self):
         self.timer.cancel()

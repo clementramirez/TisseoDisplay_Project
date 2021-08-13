@@ -17,11 +17,22 @@ class DebugShell(threading.Thread):
             ipt = ipt.split(" ")
             if ipt[0] == "read":
                 print(BT_R.read())
-            elif ipt[0] == "led":
+            if ipt[0] == "button":
                 try:
-                    LED.set(int(ipt[1]), float(ipt[2]))
-                except Exception as exep:
-                    print("Error: mode or/and option incorrect ==>", exep)
+                    if ipt[1] == "right":
+                        BT_R.Button_Buff.append([0, 0, 0, 1, 0])
+                    elif ipt[1] == "left":
+                        BT_R.Button_Buff.append([0, 0, 1, 0, 0])
+                    elif ipt[1] == "up":
+                        BT_R.Button_Buff.append([1, 0, 0, 0, 0])
+                    elif ipt[1] == "down":
+                        BT_R.Button_Buff.append([0, 1, 0, 0, 0])
+                    elif ipt[1] == "ok":
+                        BT_R.Button_Buff.append([0, 0, 0, 0, 1])
+                    else:
+                        print("The specified button does not exist")
+                except IndexError:
+                    print("You haven't specified any button to press")
             elif ipt[0] == "clear":
                 LCD.reset()
             elif ipt[0] == "exit":

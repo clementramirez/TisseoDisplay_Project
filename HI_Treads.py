@@ -50,7 +50,7 @@ class Led():
         GPIO.setup(LED_1, GPIO.OUT)
         self.mode = 0
         self.option = 0
-        self.lastoption = 0
+        self.lastoption = 1
         self.timer = threading.Timer(self.option, self.blink)
         self.blinkstate = 0
 
@@ -242,7 +242,7 @@ class LCDscreen(threading.Thread):
                     # Retreive meteo data
                     current_meteo = self.METEO_T.read()
                     # Apply different senarios for the led
-                    if 7 < int(datas[0][1]) <= 10:
+                    if 7 < int(datas[0][1]) <= 30:
                         self.LED_T.set(1, 1)
                     elif 5 <= int(datas[0][1]) <= 7:
                         self.LED_T.set(1, 0.5)
@@ -264,7 +264,8 @@ class LCDscreen(threading.Thread):
                             self.lcd.lcd_display_string("     Meteo     " + timestr, 1)
                             self.lcd.lcd_display_string("Wind: %02dkm/h - %02d" % (current_meteo['Wind_spd'],
                                                                                    current_meteo['Wind_hdg']), 2)
-                            self.lcd.lcd_display_string("Clds: %02d%% - Rn: 15'" % (current_meteo['Clds']), 3)
+                            self.lcd.lcd_display_string("Clouds: %02d%% - Rn: %02d" % (current_meteo['Clds'],
+                                                                                       current_meteo['Rain']), 3)
                             self.lcd.lcd_display_string("T: %02d/%02dC - H: %02d%%" % (current_meteo['T_real'],
                                                                                        current_meteo['T_ressent'],
                                                                                        current_meteo['Hum']), 4)
@@ -290,12 +291,12 @@ class LCDscreen(threading.Thread):
 
     def set(self, mode):
         """Changes the current menu or mode of the screen"""
-        while self.available == False:
+        while self.available is False:
             print("Busy")
-        self.available == False
+        self.available is False
         self.reset()
         self.mode = mode
-        self.available == True
+        self.available is True
 
     def reset(self):
         """Resets the lcd screen"""
