@@ -1,5 +1,5 @@
 # Modules importation
-from HI_Treads import Led, Button_Retreiver, LCDscreen
+from HI_Treads import Led, Button_Retreiver, LCDscreen, GPIO_device
 from DB_Treads import DB_Tread
 from METEO_Treads import METEO_Tread
 import time
@@ -8,6 +8,9 @@ import configparser
 import logging
 # import coloredlogs # Uncomment if used later
 from logging.handlers import RotatingFileHandler
+
+# Used Pins
+IMPR3D_pin = 22
 
 
 class DebugShell(threading.Thread):
@@ -59,7 +62,7 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 # Declaration of global variables
-...
+
 
 # Initialisation of Human-Machine Interface and DB_Thread
 LED = Led()
@@ -72,7 +75,8 @@ DB_T = DB_Tread(config['DB_config']['Host'],
                 config['TisseoAPI_config']['Request'],
                 config['TisseoAPI_config']['API_key'],
                 config['DB_config']['Updt_Rate'])
-LCD = LCDscreen(DB_object=DB_T, LED_object=LED, METEO_object=METEO_T)
+IMPR3D_GPIO = GPIO_device(IMPR3D_pin)
+LCD = LCDscreen(DB_object=DB_T, LED_object=LED, METEO_object=METEO_T, IMPR3D_object=IMPR3D_GPIO)
 BT_R.start()
 DB_T.start()
 LCD.start()
@@ -88,18 +92,19 @@ while True:
         button = BT_R.read()
         if button is not None:
             if button[4] == 1:
-                dispmode = (dispmode + 1) % 2
-                LED.set(0, dispmode)
+                if LCD.mode == 2:
+                    if LCD.selectedLine == 1:
+                        IMPR3D_GPIO.setState((IMPR3D_GPIO.getState() + 1) % 2)
             if button[3] == 1:
-                LCD.set((LCD.mode + 1) % 2)
+                LCD.set((LCD.mode + 1) % 3)
             if button[2] == 1:
-                LCD.set((LCD.mode - 1) % 2)
+                LCD.set((LCD.mode - 1) % 3)
             if button[1] == 1:
-                timei -= 0.1
-                LED.set(1, timei)
+                if LCD.mode == 2:
+                    LCD.selectedLine = (LCD.selectedLine - 1) % 4 + 1
             if button[0] == 1:
-                timei += 0.1
-                LED.set(1, timei)
+                if LCD.mode == 2:
+                    LCD.selectedLine = (LCD.selectedLine + 1) % 4 + 1
     except Exception as e:
         logger.error(e)
 

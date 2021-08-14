@@ -202,12 +202,13 @@ class LCDscreen(threading.Thread):
         """Constructs al attributes, initialised the lcd screen and shows splash screen"""
         threading.Thread.__init__(self)
 
-        self.DB_T, self.LED_T, self.METEO_T = kargs['DB_object'], kargs['LED_object'], kargs['METEO_object']
+        self.DB_T, self.LED_T, self.METEO_T, self.IMPR3D_GPIO = kargs['DB_object'], kargs['LED_object'], kargs['METEO_object'], kargs['IMPR3D_object']
 
         # Initialisation of the LCD screen
         self.lcd = lcddriver.lcd()
         self.lcd.lcd_clear()
         self.mode = 0
+        self.selectedLine = 1
         self.available = True
         self.wantstop = False
 
@@ -269,6 +270,10 @@ class LCDscreen(threading.Thread):
                             self.lcd.lcd_display_string("T: %02d/%02dC - H: %02d%%" % (current_meteo['T_real'],
                                                                                        current_meteo['T_ressent'],
                                                                                        current_meteo['Hum']), 4)
+                    elif self.mode == 2:
+                        self.lcd.lcd_display_string(" Interrupteurs " + timestr, 1)
+                        self.lcd.lcd_display_string(" Impr 3d         {}".format(" ON" if self.IMPR3D_GPIO.getState() else "OFF"), 2)
+                        self.lcd.lcd_display_string(">", self.selectedLine + 1)
                     self.available = True
                 else:
                     print("Busy")
@@ -302,6 +307,20 @@ class LCDscreen(threading.Thread):
         """Resets the lcd screen"""
         self.lcd = lcddriver.lcd()
         self.lcd.lcd_clear()
+
+
+class GPIO_device():
+
+    def __init__(self, pin):
+        self.pin = pin
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(pin, GPIO.OUT)
+
+    def getState(self):
+        return GPIO.input(self.pin)
+
+    def setState(self, state):
+        GPIO.output(self.pin, state)
 
 
 # Test code to controls HMI peripheral
