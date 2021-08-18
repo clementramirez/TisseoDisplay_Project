@@ -4,8 +4,11 @@ import threading
 import time
 import RPi.GPIO as GPIO
 import datetime
+
+import requests
 import lcddriver
 import logging
+import tinytuya
 
 # Logger Init
 logger = logging.getLogger()
@@ -202,13 +205,13 @@ class LCDscreen(threading.Thread):
         """Constructs al attributes, initialised the lcd screen and shows splash screen"""
         threading.Thread.__init__(self)
 
-        self.DB_T, self.LED_T, self.METEO_T, self.IMPR3D_GPIO = kargs['DB_object'], kargs['LED_object'], kargs['METEO_object'], kargs['IMPR3D_object']
+        self.DB_T, self.LED_T, self.METEO_T, self.IMPR3D_GPIO, self.MAINBULB_TUYA = kargs['DB_object'], kargs['LED_object'], kargs['METEO_object'], kargs['IMPR3D_object'], kargs['MAINBULB_TUYA']
 
         # Initialisation of the LCD screen
         self.lcd = lcddriver.lcd()
         self.lcd.lcd_clear()
         self.mode = 0
-        self.selectedLine = 1
+        self.selectedLine = 2
         self.available = True
         self.wantstop = False
 
@@ -273,7 +276,10 @@ class LCDscreen(threading.Thread):
                     elif self.mode == 2:
                         self.lcd.lcd_display_string(" Interrupteurs " + timestr, 1)
                         self.lcd.lcd_display_string(" Impr 3d         {}".format(" ON" if self.IMPR3D_GPIO.getState() else "OFF"), 2)
+                        self.lcd.lcd_display_string(" Main Bulb      {}".format(self.MAINBULB_TUYA.getState()), 3)
+                        self.lcd.lcd_display_string("                    ", 4)
                         self.lcd.lcd_display_string(">", self.selectedLine + 1)
+                        time.sleep(0.2)
                     self.available = True
                 else:
                     print("Busy")
@@ -310,7 +316,21 @@ class LCDscreen(threading.Thread):
 
 
 class GPIO_device():
+    '''
+    Return a GPIO_device that is capable to return his binary state and change it
 
+    Attributes
+    ----------
+    pin : int
+        Indicate the pin of the GPIO device
+
+    Methods
+    -------
+    getState()
+        Return the current state of the GPIO device
+    setState()
+        Change the state of the GPIO device
+    '''
     def __init__(self, pin):
         self.pin = pin
         GPIO.setmode(GPIO.BOARD)
@@ -321,6 +341,46 @@ class GPIO_device():
 
     def setState(self, state):
         GPIO.output(self.pin, state)
+
+
+class TuyaBulb_device():
+    '''
+    Return a TuyaBulb_device that is capable to use tinytuya package and configure it
+
+
+    '''
+    def __init__(self, device_id, device_ip, device_key, device_version=3.3):
+        self.device_id = device_id
+        self.device_ip = device_ip
+        self.device_key = device_key
+        self.device_version = device_version
+
+        self.device = tinytuya.BulbDevice(device_id, device_ip, device_key)
+        self.device.set_version(device_version)
+        self.device.set_socketTimeout(0.2)
+        self.device.set_socketRetryLimit(1)
+
+    def getState(self):
+        self.rawStatus = self.device.status()
+        if self.rawStatus.get('Error', False) == 'Network Error: Device Unreachable':
+            return 'DISC'
+        elif self.rawStatus.get('dps', None).get('20') is True:
+            self.powerStatus = True
+            return '  ON'
+        elif self.rawStatus.get('dps', None).get('20') is False:
+            self.powerStatus = False
+            return ' OFF'
+        else:
+            self.powerStatus = None
+            return '????'
+
+    def toggle(self):
+        if self.powerStatus is True:
+            self.device.turn_off()
+        elif self.powerStatus is False:
+            self.device.turn_on()
+        else:
+            pass
 
 
 # Test code to controls HMI peripheral

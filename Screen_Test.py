@@ -1,5 +1,5 @@
 # Modules importation
-from HI_Treads import Led, Button_Retreiver, LCDscreen, GPIO_device
+from HI_Treads import Led, Button_Retreiver, LCDscreen, GPIO_device, TuyaBulb_device
 from DB_Treads import DB_Tread
 from METEO_Treads import METEO_Tread
 import time
@@ -76,7 +76,9 @@ DB_T = DB_Tread(config['DB_config']['Host'],
                 config['TisseoAPI_config']['API_key'],
                 config['DB_config']['Updt_Rate'])
 IMPR3D_GPIO = GPIO_device(IMPR3D_pin)
-LCD = LCDscreen(DB_object=DB_T, LED_object=LED, METEO_object=METEO_T, IMPR3D_object=IMPR3D_GPIO)
+MAINBULB_TUYA = TuyaBulb_device('020836852462ab546927', "192.168.1.18", "e56e24202f6f428f")
+LCD = LCDscreen(DB_object=DB_T, LED_object=LED, METEO_object=METEO_T,
+                IMPR3D_object=IMPR3D_GPIO, MAINBULB_TUYA=MAINBULB_TUYA)
 BT_R.start()
 DB_T.start()
 LCD.start()
@@ -86,6 +88,7 @@ debugshell.start()
 logger.debug("Hello")
 time.sleep(3)
 timei = 0.5
+lampemode = 0
 
 while True:
     try:
@@ -95,6 +98,8 @@ while True:
                 if LCD.mode == 2:
                     if LCD.selectedLine == 1:
                         IMPR3D_GPIO.setState((IMPR3D_GPIO.getState() + 1) % 2)
+                    elif LCD.selectedLine == 2:
+                        MAINBULB_TUYA.toggle()
             if button[3] == 1:
                 LCD.set((LCD.mode + 1) % 3)
             if button[2] == 1:
