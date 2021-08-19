@@ -5,7 +5,7 @@ import time
 import RPi.GPIO as GPIO
 import datetime
 
-import requests
+import socket
 import lcddriver
 import logging
 import tinytuya
@@ -52,8 +52,9 @@ class Led():
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(LED_1, GPIO.OUT)
         self.mode = 0
+        self.lastmode = 0
         self.option = 0
-        self.lastoption = 1
+        self.lastoption = 0
         self.timer = threading.Timer(self.option, self.blink)
         self.blinkstate = 0
 
@@ -61,6 +62,7 @@ class Led():
         """Blink function that works with a timer which is called after a specified number of seconds"""
         self.blinkstate = (self.blinkstate + 1) % 2
         GPIO.output(LED_1, self.blinkstate)
+        logger.debug("Led state is : %s", self.blinkstate)
         self.timer = threading.Timer(self.option, self.blink)
         self.timer.start()
 
@@ -84,17 +86,18 @@ class Led():
         if mode == 0:
             self.cancel()
             try:
-                GPIO.output(LED_1, int(option))
+                if option != self.lastoption and mode != self.lastmode:
+                    GPIO.output(LED_1, int(option))
+                    logger.info("Led switched to mode : %s with option : %s", mode, option)
             except Exception:
                 print("Error: mode or/and option incorrect")
         # Blinking mode
         elif mode == 1:
             if option != 0 and option != self.lastoption:
+                logger.info("Led switched to mode : %s with option : %s", mode, option)
                 self.lastoption = option
                 self.cancel()
                 self.blink()
-
-        logger.debug("Led switched to mode : %s with option : %s", mode, option)
 
     def cancel(self):
         """Cancels the timer to kill the Tread process"""
@@ -154,7 +157,7 @@ class Button_Retreiver(threading.Thread):
             # Adding the actual tuple of data in the FIFO
             if (act_Data != lastElement and act_Data != (0, 0, 0, 0, 0)):
                 self.Button_Buff.append(act_Data)
-                logger.debug("Button Pressed : %s", act_Data)
+                logger.info("Button Pressed : %s", act_Data)
             lastElement = act_Data
 
             time.sleep(self.updt_rate)
@@ -202,7 +205,7 @@ class LCDscreen(threading.Thread):
         Resets the lcd screen
     """
     def __init__(self, **kargs):
-        """Constructs al attributes, initialised the lcd screen and shows splash screen"""
+        """Constructs all attributes, initialised the lcd screen and shows splash screen"""
         threading.Thread.__init__(self)
 
         self.DB_T, self.LED_T, self.METEO_T, self.IMPR3D_GPIO, self.MAINBULB_TUYA = kargs['DB_object'], kargs['LED_object'], kargs['METEO_object'], kargs['IMPR3D_object'], kargs['MAINBULB_TUYA']
@@ -226,6 +229,9 @@ class LCDscreen(threading.Thread):
         timenow = datetime.datetime.now()
         while not self.wantstop:
             try:
+                # Check internet connection
+                socket.setdefaulttimeout(1)
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("8.8.8.8", 53))
 
                 # Tisseo autobus data display mode
                 if self.available is True:
@@ -235,7 +241,6 @@ class LCDscreen(threading.Thread):
                     lasttimenow = timenow
                     timenow = datetime.datetime.now()
                     RawData = self.DB_T.read()
-                    datas = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
                     if timenow.second != lasttimenow.second and RawData != []:
                         datas = []
                         timestr = "%02d:%02d" % (timenow.hour, timenow.minute)
@@ -246,11 +251,11 @@ class LCDscreen(threading.Thread):
                     # Retreive meteo data
                     current_meteo = self.METEO_T.read()
                     # Apply different senarios for the led
-                    if 7 < int(datas[0][1]) <= 30:
+                    if 7 < int(datas[0][1]) <= 10:
                         self.LED_T.set(1, 1)
                     elif 5 <= int(datas[0][1]) <= 7:
                         self.LED_T.set(1, 0.5)
-                    elif 3 <= int(datas[0][1]) < 5:
+                    elif 0 <= int(datas[0][1]) < 5:
                         self.LED_T.set(1, 0.25)
                     else:
                         self.LED_T.set(0, 0)
@@ -278,12 +283,16 @@ class LCDscreen(threading.Thread):
                         self.lcd.lcd_display_string(" Impr 3d         {}".format(" ON" if self.IMPR3D_GPIO.getState() else "OFF"), 2)
                         self.lcd.lcd_display_string(" Main Bulb      {}".format(self.MAINBULB_TUYA.getState()), 3)
                         self.lcd.lcd_display_string("                    ", 4)
-                        self.lcd.lcd_display_string(">", self.selectedLine + 1)
+                        self.lcd.lcd_display_string(">", self.selectedLine + 2)
                         time.sleep(0.2)
                     self.available = True
                 else:
                     print("Busy")
-
+            except socket.error as ex:
+                self.lcd.lcd_display_string("*------------------*", 1)
+                self.lcd.lcd_display_string("|     Internet     |", 2)
+                self.lcd.lcd_display_string("|   Disconnected   |", 3)
+                self.lcd.lcd_display_string("*------------------*", 4)
             except OSError:
                 logger.error("I/O Error of the LCD screen")
                 self.available = True
@@ -293,7 +302,6 @@ class LCDscreen(threading.Thread):
             except NameError as e:
                 logger.error("Name Error as %s" % (e))
                 self.available = True
-
             time.sleep(0.2)
 
     def stop(self):
@@ -303,11 +311,12 @@ class LCDscreen(threading.Thread):
     def set(self, mode):
         """Changes the current menu or mode of the screen"""
         while self.available is False:
-            print("Busy")
-        self.available is False
+            pass
+        self.available = False
         self.reset()
         self.mode = mode
-        self.available is True
+        logger.info("Screen switched to mode : %d", mode)
+        self.available = True
 
     def reset(self):
         """Resets the lcd screen"""
@@ -323,7 +332,8 @@ class GPIO_device():
     ----------
     pin : int
         Indicate the pin of the GPIO device
-
+    name : str
+        Indicate the name of the GPIO device
     Methods
     -------
     getState()
@@ -331,28 +341,54 @@ class GPIO_device():
     setState()
         Change the state of the GPIO device
     '''
-    def __init__(self, pin):
+    def __init__(self, pin, name):
         self.pin = pin
+        self.name = name
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(pin, GPIO.OUT)
 
     def getState(self):
+        """Return the current state of the GPIO device"""
         return GPIO.input(self.pin)
 
     def setState(self, state):
+        """Change the state of the GPIO device"""
         GPIO.output(self.pin, state)
+        logger.info("GPIO device <%s> switched to %s", self.name, state)
 
 
 class TuyaBulb_device():
     '''
     Return a TuyaBulb_device that is capable to use tinytuya package and configure it
 
-
+    Attributes
+    ----------
+    device_id : str
+        Device ID
+    device_ip : str
+        Device IP
+    device_key : str
+        Device local key
+    device_version : float
+        Device version (3.1 or 3.3(default))
+    powerStatus : boolean
+        Indicate if the bulb is ON, OFF or Unknown
+    rawStatus : dictionnary
+        Store the result of device.status() function
+    device : tinytuya.BulbDevice.object
+        BulbDevice object from tinytuya package
+    Methods
+    -------
+    toggle()
+        Toogle the bulb according with the last retreived status
+    getState()
+        Change the state of the GPIO device
     '''
-    def __init__(self, device_id, device_ip, device_key, device_version=3.3):
+    def __init__(self, device_id, device_ip, device_key, name, device_version=3.3):
         self.device_id = device_id
         self.device_ip = device_ip
         self.device_key = device_key
+        self.name = name
         self.device_version = device_version
 
         self.device = tinytuya.BulbDevice(device_id, device_ip, device_key)
@@ -364,7 +400,7 @@ class TuyaBulb_device():
         self.rawStatus = self.device.status()
         if self.rawStatus.get('Error', False) == 'Network Error: Device Unreachable':
             return 'DISC'
-        elif self.rawStatus.get('dps', None).get('20') is True:
+        elif self.rawStatus.get('dps', {}).get('20') is True:
             self.powerStatus = True
             return '  ON'
         elif self.rawStatus.get('dps', None).get('20') is False:
@@ -375,12 +411,14 @@ class TuyaBulb_device():
             return '????'
 
     def toggle(self):
+        """Toogle the bulb according with the last retreived status"""
         if self.powerStatus is True:
             self.device.turn_off()
         elif self.powerStatus is False:
             self.device.turn_on()
         else:
             pass
+        logger.info("Tuya device <%s> switched to %s", self.name, not self.powerStatus)
 
 
 # Test code to controls HMI peripheral

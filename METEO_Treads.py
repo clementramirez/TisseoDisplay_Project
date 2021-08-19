@@ -1,9 +1,13 @@
 # Modules importation
 import time
 import threading
+import logging
 from datetime import datetime
 from meteofrance_api import MeteoFranceClient
 from meteofrance_api.model import Place
+
+# Logger Init
+logger = logging.getLogger()
 
 
 class METEO_Tread():
@@ -18,7 +22,7 @@ class METEO_Tread():
 
 
     """
-    def __init__(self, updt_rate=5):
+    def __init__(self, updt_rate=300):
         self.updt_rate = updt_rate
         self.client = MeteoFranceClient()
         self.currentmeteo = {}
@@ -38,6 +42,7 @@ class METEO_Tread():
                              'Wind_hdg': rawDatas.current_forecast["wind"]["direction"],
                              'Clds': rawDatas.current_forecast["clouds"],
                              'Rain': rawDatas.current_forecast["rain"]["1h"]}
+        logger.info("New meteo data retreived !")
 
     def stop(self):
         self.timer.cancel()

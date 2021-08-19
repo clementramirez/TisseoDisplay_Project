@@ -55,11 +55,13 @@ config.read('TisseoDisplay.conf')
 # Logger Init
 logger = logging.getLogger()
 # coloredlogs.install(level='DEBUG', logger=logger) #Uncomment if used later
-formatter = logging.Formatter('%(asctime)s | [%(levelname)s] | %(message)s')
+formatter = logging.Formatter('%(asctime)s || %(module)s-->l.%(lineno)d || [%(levelname)s] | %(message)s')
 file_handler = RotatingFileHandler(config['LogFile_config']['Filename'], 'a', 10000000, 1)
-file_handler.setLevel(logging.DEBUG)
+file_handler.setLevel(20)
+logger.setLevel(20)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
+threading.current_thread().name = "Main Program"
 
 # Declaration of global variables
 
@@ -75,8 +77,8 @@ DB_T = DB_Tread(config['DB_config']['Host'],
                 config['TisseoAPI_config']['Request'],
                 config['TisseoAPI_config']['API_key'],
                 config['DB_config']['Updt_Rate'])
-IMPR3D_GPIO = GPIO_device(IMPR3D_pin)
-MAINBULB_TUYA = TuyaBulb_device('020836852462ab546927', "192.168.1.18", "e56e24202f6f428f")
+IMPR3D_GPIO = GPIO_device(IMPR3D_pin, "Impr 3D")
+MAINBULB_TUYA = TuyaBulb_device('020836852462ab546927', "192.168.1.18", "e56e24202f6f428f", "Main Bulb")
 LCD = LCDscreen(DB_object=DB_T, LED_object=LED, METEO_object=METEO_T,
                 IMPR3D_object=IMPR3D_GPIO, MAINBULB_TUYA=MAINBULB_TUYA)
 BT_R.start()
@@ -85,10 +87,8 @@ LCD.start()
 
 debugshell = DebugShell()
 debugshell.start()
-logger.debug("Hello")
+logger.debug("Let's Go !!")
 time.sleep(3)
-timei = 0.5
-lampemode = 0
 
 while True:
     try:
@@ -96,9 +96,9 @@ while True:
         if button is not None:
             if button[4] == 1:
                 if LCD.mode == 2:
-                    if LCD.selectedLine == 1:
+                    if LCD.selectedLine == 0:
                         IMPR3D_GPIO.setState((IMPR3D_GPIO.getState() + 1) % 2)
-                    elif LCD.selectedLine == 2:
+                    elif LCD.selectedLine == 1:
                         MAINBULB_TUYA.toggle()
             if button[3] == 1:
                 LCD.set((LCD.mode + 1) % 3)
@@ -106,10 +106,10 @@ while True:
                 LCD.set((LCD.mode - 1) % 3)
             if button[1] == 1:
                 if LCD.mode == 2:
-                    LCD.selectedLine = (LCD.selectedLine - 1) % 4 + 1
+                    LCD.selectedLine = (LCD.selectedLine + 1) % 3
             if button[0] == 1:
                 if LCD.mode == 2:
-                    LCD.selectedLine = (LCD.selectedLine + 1) % 4 + 1
+                    LCD.selectedLine = (LCD.selectedLine - 1) % 3
     except Exception as e:
         logger.error(e)
 
