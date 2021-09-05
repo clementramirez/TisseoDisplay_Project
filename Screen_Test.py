@@ -9,9 +9,6 @@ import logging
 # import coloredlogs # Uncomment if used later
 from logging.handlers import RotatingFileHandler
 
-# Used Pins
-IMPR3D_pin = 22
-
 
 class DebugShell(threading.Thread):
     def run(self):
@@ -63,13 +60,15 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 threading.current_thread().name = "Main Program"
 
-# Declaration of global variables
-
-
 # Initialisation of Human-Machine Interface and DB_Thread
-LED = Led()
+LED = Led(config['Buttons&Led_config']['Led_pin'])
 METEO_T = METEO_Tread()
-BT_R = Button_Retreiver(0.1)
+BT_R = Button_Retreiver(0.1, config['Buttons&Led_config']['BT_UP'],
+                        config['Buttons&Led_config']['BT_DW'],
+                        config['Buttons&Led_config']['BT_LF'],
+                        config['Buttons&Led_config']['BT_RG'],
+                        config['Buttons&Led_config']['BT_OK'])
+
 DB_T = DB_Tread(config['DB_config']['Host'],
                 config['DB_config']['User'],
                 config['DB_config']['Password'],
@@ -77,13 +76,16 @@ DB_T = DB_Tread(config['DB_config']['Host'],
                 config['TisseoAPI_config']['Request'],
                 config['TisseoAPI_config']['API_key'],
                 config['DB_config']['Updt_Rate'])
-IMPR3D_GPIO = GPIO_device(IMPR3D_pin, "Impr 3D")
-MAINBULB_TUYA = TuyaBulb_device('020836852462ab546927', "192.168.1.18", "e56e24202f6f428f", "Main Bulb")
+
+IMPR3D_GPIO = GPIO_device(config['Impr3D_GPIO']['GPIO_pin'], "Impr 3D")
+MAINBULB_TUYA = TuyaBulb_device(config['MainBulb_Tuya']['device_id'], config['MainBulb_Tuya']['device_ip'], config['MainBulb_Tuya']['device_key'], "Main Bulb")
 LCD = LCDscreen(DB_object=DB_T, LED_object=LED, METEO_object=METEO_T,
                 IMPR3D_object=IMPR3D_GPIO, MAINBULB_TUYA=MAINBULB_TUYA)
 BT_R.start()
 DB_T.start()
 LCD.start()
+
+nightmodeTimer = threading.Timer(5, lambda: LCD.set_backlight('off'))
 
 debugshell = DebugShell()
 debugshell.start()
@@ -94,21 +96,38 @@ while True:
     try:
         button = BT_R.read()
         if button is not None:
+            if LCD.nightMode_is_active is True:
+                LCD.set_backlight('on')
+                if nightmodeTimer.is_alive() is True:
+                    nightmodeTimer.cancel()
+                nightmodeTimer = threading.Timer(5, lambda: LCD.set_backlight('off'))
+                nightmodeTimer.start()
+                logger.info("Screen Waked Up")
+
             if button[4] == 1:
                 if LCD.mode == 2:
                     if LCD.selectedLine == 0:
                         IMPR3D_GPIO.setState((IMPR3D_GPIO.getState() + 1) % 2)
                     elif LCD.selectedLine == 1:
                         MAINBULB_TUYA.toggle()
+                elif LCD.mode == 3:
+                    if LCD.selectedLine == 0:
+                        if LCD.nightMode_is_active == True:
+                            LCD.set_backlight('on')
+                            nightmodeTimer.cancel()
+                        else:
+                            nightmodeTimer = threading.Timer(5, lambda: LCD.set_backlight('off'))
+                            nightmodeTimer.start()
+                        LCD.nightMode_is_active = not LCD.nightMode_is_active
             if button[3] == 1:
-                LCD.set((LCD.mode + 1) % 3)
+                LCD.set((LCD.mode + 1) % 4)
             if button[2] == 1:
-                LCD.set((LCD.mode - 1) % 3)
+                LCD.set((LCD.mode - 1) % 4)
             if button[1] == 1:
-                if LCD.mode == 2:
+                if LCD.mode == 2 or LCD.mode == 3:
                     LCD.selectedLine = (LCD.selectedLine + 1) % 3
             if button[0] == 1:
-                if LCD.mode == 2:
+                if LCD.mode == 2 or LCD.mode == 3:
                     LCD.selectedLine = (LCD.selectedLine - 1) % 3
     except Exception as e:
         logger.error(e)

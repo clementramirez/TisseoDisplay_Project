@@ -89,9 +89,6 @@ class DB_Tread(threading.Thread):
         # Retreiving XML data from Tisseo API
         try:
             queryAsw = requests.get(self.HTTPRequest + "&key=" + self.APIKey).text.encode('utf-8')
-        except:
-            logger.critical("Network Failed !!")
-        if queryAsw != "":
             # XML data exctraction
             xmlf = etree.fromstring(queryAsw)
             for departure in xmlf.xpath('/departures/departure'):
@@ -107,10 +104,10 @@ class DB_Tread(threading.Thread):
 
             # Sending extracted data to mysql DB
             cursor.execute(self.addNextStopData, (self.FormatedData[0][0], self.FormatedData[0][1],
-                                                self.FormatedData[1][0], self.FormatedData[1][1],
-                                                self.FormatedData[2][0], self.FormatedData[2][1]))
+                                                  self.FormatedData[1][0], self.FormatedData[1][1],
+                                                  self.FormatedData[2][0], self.FormatedData[2][1]))
             self.mydb.commit()
-        else:
+        except Exception:
             logger.critical("Network Failed !!")
         cursor.close()
 
